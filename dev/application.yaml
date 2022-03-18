@@ -6,14 +6,14 @@ metadata:
   namespace: shinnosuke-yoshizawa-checkride-argocd
 
 spec:
-  project: default
+  project: shinnosuke-yoshizawa-checkride-argocd
 
   source:
     repoURL: https://github.com/shxn0/checkride-argocd-be.git
     targetRevision: HEAD
     path: dev
   destination:
-    server: https://kubernetes.default.svc
+    server: https://kubernetes.shinnosuke-yoshizawa-checkride-argocd.svc
     namespace: shinnosuke-yoshizawa-checkride-argocd
 
 syncPolicy:
