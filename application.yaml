@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 
 metadata:
-  name: be-argocd-app
+  name: be-argo-app
   namespace: shinnosuke-yoshizawa-checkride-argocd
 
 spec:
@@ -14,7 +14,7 @@ spec:
     path: dev
   destination:
     server: https://kubernetes.default.svc
-    namespace: shinnosuke-yoshizawa-checkride-argocd
+    namespace: shinnosuke-yoshizawa-checkride
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
