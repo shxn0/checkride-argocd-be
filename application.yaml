@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 
 metadata:
-  name: shinnosuke-yoshizawa-argocd-app
+  name: be-argocd-app
   namespace: shinnosuke-yoshizawa-checkride-argocd
 
 spec:
