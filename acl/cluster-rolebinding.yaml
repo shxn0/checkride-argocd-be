@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: shin-checkride-argo-role-binding
+  namespace: shinnosuke-yoshizawa-checkride # 付与するnamespace
+subjects:
+  - kind: ServiceAccount # ユーザーかグループかServiceAccountか
+    name: openshift-gitops-argocd-application-controller # ユーザー名
+    namespace: openshift-gitops
+roleRef:
+  kind: ClusterRole
+  name: admin # Role名
+  apiGroup: rbac.authorization.k8s.io

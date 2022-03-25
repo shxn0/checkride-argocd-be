@@ -1,0 +1,174 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  annotations:
+    app.openshift.io/runtime: nodejs
+  name: backend-pipeline
+spec:
+  workspaces:
+    - name: pipeline-shared-data
+      description: |
+        This workspace stores the cloned repository and is available to all steps
+    - name: git-basic-auth
+    # - name: pipeline-shared-data-for-manifest
+
+  params:
+    - name: image-repo
+      type: string
+      description: Docker image name
+      default: quay.io/shinnosuke_yoshizawa_ibm/checkride-be
+    - name: manifests-revision
+      type: string
+      description: Git repository revision for manifests
+      default: main
+    - name: manifests-username
+      type: string
+      description: Git repository user name
+      default: shxn0
+    - name: manifests-useremail
+      type: string
+      description: Git repository user email
+      default: pokopanic19@gmail.com
+
+  tasks:
+    - name: clone-repository
+      params:
+        - name: url
+          value: https://github.com/shxn0/checkride-be.git
+      taskRef:
+        kind: Task
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: pipeline-shared-data
+        - name: basic-auth
+          workspace: git-basic-auth
+
+    - name: build-image
+      runAfter:
+        - clone-repository
+      taskRef:
+        kind: Task
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: pipeline-shared-data
+      params:
+        - name: IMAGE
+          value: "$(params.image-repo):$(tasks.clone-repository.results.commit)"
+
+    - name: clone-manifests-repo
+      runAfter:
+        - build-image
+      params:
+        - name: url
+          value: https://github.com/shxn0/checkride-argocd-be.git
+      taskRef:
+        kind: Task
+        name: git-clone
+      workspaces:
+        - name: output
+          # workspace: pipeline-shared-data-for-manifest
+          workspace: pipeline-shared-data
+        - name: basic-auth
+          workspace: git-basic-auth
+
+    - name: kustomize-build
+      runAfter:
+        - clone-manifests-repo
+      params:
+        - name: image-with-tag
+          value: "quay.io/shinnosuke_yoshizawa_ibm/checkride-be=$(params.image-repo):$(tasks.clone-repository.results.commit)"
+      taskRef:
+        kind: Task
+        name: kustomize-build
+      workspaces:
+        - name: source
+          # workspace: pipeline-shared-data-for-manifest
+          workspace: pipeline-shared-data
+
+    - name: push-manifests
+      runAfter:
+        - kustomize-build
+      params:
+        # - name: GIT_USER_NAME
+        #   value: shxn0
+        - name: GIT_SCRIPT
+          value: |
+            # VAR=`git remote -v`
+            # echo "====="
+            # VAR=`git config -l`
+            # echo "====="
+
+            cd $(workspaces.source.path)       
+
+            git remote set-url origin https://USER_NAME:TOKEN/USER_NAME/checkride-argocd-be.git
+
+            if [ -z $(git status -s) ]; then
+              echo "Nothing to commit"
+            else
+              git fetch origin
+              git checkout $(params.manifests-revision)
+              git branch
+              mv ./dev/manifests.yaml ./manifests/
+
+              VAR=`ls -la`
+              echo $VAR
+
+              git diff
+              git add -A ./manifests/manifests.yaml
+              git commit -m "[TEKTON-PIPELINES] Change container image in manifests: $(tasks.clone-repository.results.commit)."
+              git push -u origin main
+            fi
+
+      taskRef:
+        kind: Task
+        name: git-cli
+      workspaces:
+        - name: source
+          # workspace: pipeline-shared-data-for-manifest
+          workspace: pipeline-shared-data
+        - name: basic-auth
+          workspace: git-basic-auth
+
+    # - name: test-deploy
+    #   runAfter:
+    #     - kustomize-build
+    #   params:
+    #     - name: app-namespace
+    #       value: shinnosuke-yoshizawa-checkride
+    #     - name: app-name
+    #       value: shinnosuke-yoshizawa-checkride
+    #   taskRef:
+    #     kind: Task
+    #     name: test-deploy
+    #   workspaces:
+    #     - name: source
+    #       workspace: pipeline-shared-data
+
+    # - name: bump-image-tag
+    #   runAfter:
+    #     - build-image
+    #   params:
+    #     - name: image
+    #       value: $(params.image-repo)
+    #     - name: context
+    #       value: ""
+    #     - name: tag
+    #       value: $(tasks.clone-repository.results.commit)
+    #       taskRef:
+    #         kind: Task
+    #         name: kustomize-set-image-tag
+    #       workspaces:
+    #         - name: source
+    #           workspace: pipeline-shared-data
+
+    # - name: commit-image-bump
+    #   runAfter:
+    #     - bump-image-tag
+    #   params:
+    #     - name:
+
+    # - name: sync-app
+    #   runAfter:
+    #     - bump-image-commit
