@@ -88,6 +88,8 @@ spec:
       runAfter:
         - kustomize-build
       params:
+        - name: GIT_USER_NAME
+          value: shxn0
         - name: GIT_SCRIPT
           value: |
             cd $(workspaces.source.path)       
